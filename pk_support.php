@@ -5,10 +5,9 @@
  * An open source application library for PHP 5.5 or newer
  *
  * @package		PHPKit.Support
- * @author		Eric-XI
- * @copyright	Copyright (c) 2008 - 2011, EllisLab, Inc.
- * @license		http://pks.g.xcodekit.com/license.html
- * @link		http://pks.g.xcodekit.com
+ * @author		Eric-XI 
+ * @license		http://phpkit-support.eric-xi.com/license.html
+ * @link		http://phpkit-support.eric-xi.com
  * @since		Version 1.0
  * @filesource
  */
