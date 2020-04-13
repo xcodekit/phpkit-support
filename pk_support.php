@@ -138,4 +138,13 @@ function pk_each(&$array){
     return $res;
 }
  
+
+/***#安全校验 */
+$requestRoot=pk_request_uri();
+/**#URL地址禁止存在空格 */
+if (preg_match("/\s/", $requestRoot)||preg_match("/\s/", urldecode($requestRoot))) {
+    header('HTTP/1.1 404 Not Found'); 
+    header("status: 404 Not Found");
+    exit(); 
+}  
 ?>
