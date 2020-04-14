@@ -12,6 +12,7 @@
  * @filesource
  */
 
+ /**#基础安全设置 */
  /**
   *  #获取请求URL;
   *  不建议使用;
@@ -55,7 +56,9 @@ function pk_detect_uri()
     $uri = parse_url($uri, PHP_URL_PATH);  
      return str_replace(array('//', '../'), '/', trim($uri, '/'));
  } 
- 
+ function pk_env($name){
+     return  getenv($name);
+ }
  /**
   *  #获取请求URL;
   *  推荐;
@@ -70,6 +73,15 @@ function pk_detect_uri()
            } 
     }  
     return $_SERVER['QUERY_STRING']?$uri."?".$_SERVER['QUERY_STRING']:$uri; 
+ }
+ /**#异常信息拦截器 */
+ function pk_error_render($rCode=false){
+         error_reporting(E_ALL & ~(E_STRICT | E_NOTICE));
+        error_reporting(-1);
+        if ( ! @ini_get('display_errors'))
+        {
+            @ini_set('display_errors', 1);
+        }  
  }
   /**
   *  #数据请求;
@@ -139,12 +151,99 @@ function pk_each(&$array){
 }
  
 
-/***#安全校验 */
-$requestRoot=pk_request_uri();
-/**#URL地址禁止存在空格 */
-if (preg_match("/\s/", $requestRoot)||preg_match("/\s/", urldecode($requestRoot))) {
+function pk_cookie($name,$value=false,$arg0=false,$arg1=false,$arg2=false){ 
+       if($arg0==false||$arg0<1){
+           $arg0=time()+3600*12;
+       }  
+       //pk_env("XSERVER_ROOT")
+       setcookie($name,$value,$arg0,"/",pk_env("XSERVER_ROOT"),defined("PK_DATA_HTTPS")?1:0,1);     
+}
+/**#mysql函数支持 */
+if(!function_exists('mysql_pconnect')){  
+    function mysql_free_result($cont=false){
+       
+    }
+    
+    define("MYSQL_NUM","MYSQL_NUM");
+    define("MYSQL_ASSOC","MYSQL_ASSOC");
+    function mysql_num_fields($rs){  
+       global $mysqli;  
+       return mysqli_num_fields($rs);  
+       }  
+    function mysql_error($con=false){
+            global $mysqli;  
+       return mysqli_error($con);  
+       }
+       function mysql_errno(){
+           
+       }
+   function mysql_pconnect($dbhost, $dbuser, $dbpass){   
+       global $mysqli;   
+       $mysqli = mysqli_connect($dbhost, $dbuser, $dbpass);  
+       return $mysqli;  
+       }  
+    function mysql_connect($dbhost, $dbuser, $dbpass){   
+       global $mysqli;   
+       $mysqli = mysqli_connect($dbhost, $dbuser, $dbpass);   
+       return $mysqli;  
+       }  
+   function mysql_get_server_info(){
+       return "5.7";
+   }
+   function mysql_select_db($dbname){  
+       global $mysqli;  
+       return mysqli_select_db($mysqli,$dbname);  
+       }  
+   function mysql_fetch_array($result){  
+       return mysqli_fetch_array($result);  
+       }  
+   function mysql_fetch_assoc($result){  
+       return mysqli_fetch_assoc($result);  
+       }  
+   function mysql_fetch_row($result){  
+       return mysqli_fetch_row($result);  
+       }  
+   function mysql_query($cxn){  
+       global $mysqli;   
+       return mysqli_query($mysqli,$cxn);  
+       }  
+    function mysql_num_rows($result){  
+         $row_cnt = mysqli_num_rows($result);  return $row_cnt ;} 
+    function mysql_escape_string($data){  
+         global $mysqli;    
+         return mysqli_real_escape_string($mysqli, $data);    }  
+    function mysql_real_escape_string($data){    return mysql_real_escape_string($data);    }  
+   function mysql_close(){     global $mysqli;   return mysqli_close($mysqli);    }  
+}  
+
+function pk_error($code,$msg=""){
     header('HTTP/1.1 404 Not Found'); 
     header("status: 404 Not Found");
     exit(); 
-}  
+}
+/***#安全校验 */ 
+function pk_check_sec($type="http"){
+    
+    @ini_set("session.cookie_httponly", true);  
+    if($type=="https"){
+       @ini_set("session.cookie_secure", true);  
+       define("PK_DATA_HTTPS","https");
+    }
+    include_once 'lib_sec.php'; 
+    $requestRoot=pk_request_uri();
+    /**#URL地址禁止存在空格 */
+    if (pk_has_space($requestRoot)) {
+       
+        //pk_error(404); 
+    }else{
+       $fullRequest=pk_request_body(); 
+  
+         
+       if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){ 
+            pk_error(404);
+       } 
+    }  
+}
+
+ 
 ?>
