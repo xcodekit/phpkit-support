@@ -172,14 +172,18 @@ if(!function_exists('mysql_pconnect')){
        }  
     function mysql_error($con=false){
             global $mysqli;  
-       return mysqli_error($con);  
+            return mysqli_error($con?$con:$mysqli);  
        }
        function mysql_errno(){
            
        }
    function mysql_pconnect($dbhost, $dbuser, $dbpass){   
        global $mysqli;   
-       $mysqli = mysqli_connect($dbhost, $dbuser, $dbpass);  
+        $hosts=explode(":",$dbhost);
+       if(count($hosts)==2){
+          $mysqli = mysqli_connect($hosts[0], $dbuser, $dbpass,null,$hosts[1]);  
+       }else 
+          $mysqli = mysqli_connect($dbhost, $dbuser, $dbpass);  
        return $mysqli;  
        }  
     function mysql_connect($dbhost, $dbuser, $dbpass){   
@@ -192,12 +196,13 @@ if(!function_exists('mysql_pconnect')){
    }
    function mysql_select_db($dbname){  
        global $mysqli;  
-       return mysqli_select_db($mysqli,$dbname);  
+       return mysqli_select_db($mysqli,  str_replace("`","",$dbname));  
        }  
    function mysql_fetch_array($result){  
        return mysqli_fetch_array($result);  
        }  
    function mysql_fetch_assoc($result){  
+       if($result)
        return mysqli_fetch_assoc($result);  
        }  
    function mysql_fetch_row($result){  
