@@ -57,7 +57,10 @@ function pk_detect_uri()
      return str_replace(array('//', '../'), '/', trim($uri, '/'));
  } 
  function pk_env($name){
-     return  getenv($name);
+      if($name=="XAPP_PROTOCOL"){
+        return XAPP_PROTOCOL; 
+      }else
+        return  getenv($name);
  }
  /**
   *  #获取请求URL;
@@ -227,27 +230,37 @@ function pk_error($code,$msg=""){
     exit(); 
 }
 /***#安全校验 */ 
-function pk_check_sec($type="http"){
+function pk_check_cookie($protocol){
+
     if (session_status()  ==PHP_SESSION_ACTIVE) {
         session_write_close(); 
-     } 
+    } 
     @ini_set("session.use_trans_sid", false); 
-    @ini_set("session.cookie_httponly", true);  
-    if($type=="https"){
-       @ini_set("session.cookie_secure", true);  
-       define("PK_DATA_HTTPS","https");
+    @ini_set("session.cookie_httponly", true);   
+    if($protocol=="https"){
+        @ini_set("session.cookie_secure", true);  
+        define("PK_DATA_HTTPS","https");
     }
     session_start();
+
+}
+function pk_check_sec($protocol="http",$ExcludePaths=array()){
+    define("XAPP_PROTOCOL",$protocol);
+    pk_check_cookie($protocol);
     include_once 'lib_sec.php'; 
     $requestRoot=pk_request_uri();
     /**#URL地址禁止存在空格 */
-    if (pk_has_space($requestRoot)) {
-       
-        //pk_error(404); 
+    for($i=0;$i<count($ExcludePaths);$i++){
+         $exclude=$ExcludePaths[$i];
+             
+        if(preg_match($exclude,$requestRoot)){
+             return true;
+        }  
+    }
+    if (pk_has_space($requestRoot)) { 
+        pk_error(404); 
     }else{
-       $fullRequest=pk_request_body(); 
-  
-         
+       $fullRequest=pk_request_body();  
        if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){ 
             pk_error(404);
        } 
