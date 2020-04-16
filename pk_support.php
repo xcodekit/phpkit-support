@@ -228,12 +228,16 @@ function pk_error($code,$msg=""){
 }
 /***#安全校验 */ 
 function pk_check_sec($type="http"){
-    
+    if (session_status()  ==PHP_SESSION_ACTIVE) {
+        session_write_close(); 
+     } 
+    @ini_set("session.use_trans_sid", false); 
     @ini_set("session.cookie_httponly", true);  
     if($type=="https"){
        @ini_set("session.cookie_secure", true);  
        define("PK_DATA_HTTPS","https");
     }
+    session_start();
     include_once 'lib_sec.php'; 
     $requestRoot=pk_request_uri();
     /**#URL地址禁止存在空格 */
