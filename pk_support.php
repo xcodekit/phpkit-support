@@ -244,24 +244,40 @@ function pk_check_cookie($protocol){
     session_start();
 
 }
+function pk_check_xss($data){
+    $val= strtolower(urldecode($data));
+    $xss= preg_match("/\/|\~|\!|\@|\#|\\$|\%|\^|\&|\*|\(|\)|\（|\）|\+|\{|\}|\:|\<|\>|\?|\[|\]|\,|\.|\/|\'|\`|\-|\=|\\\|\||\s+/",$val)||pk_has_risk($data);
+     if($xss){
+        pk_error(404);
+        exit();
+    }
+    
+}
+ 
 function pk_check_sec($protocol="http",$ExcludePaths=array()){
     define("XAPP_PROTOCOL",$protocol);
     pk_check_cookie($protocol);
     include_once 'lib_sec.php'; 
     $requestRoot=pk_request_uri();
+    /**#不允许使用Get请求发送用户密码 */
+    if(isset($_GET["username"])||isset($_GET["password"])){
+         pk_error(404);
+    }
+     
     /**#URL地址禁止存在空格 */
     for($i=0;$i<count($ExcludePaths);$i++){
-         $exclude=$ExcludePaths[$i];
-             
+         $exclude=$ExcludePaths[$i]; 
         if(preg_match($exclude,$requestRoot)){
              return true;
         }  
     }
-    if (pk_has_space($requestRoot)) { 
-        pk_error(404); 
+ 
+    if (pk_has_space($requestRoot)) {  
+            pk_error(404); 
     }else{
        $fullRequest=pk_request_body();  
-       if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){ 
+       if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){  
+          
             pk_error(404);
        } 
     }  
