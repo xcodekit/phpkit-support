@@ -233,15 +233,11 @@ function pk_error($code=1,$msg=""){
     exit(); 
 }
  
-function pk_check_xss($data){
+/**#检测基本参数,不允许出现危险符号 */
+function pk_check_baseparam($data){
     $val= strtolower(urldecode($data));
-    $xss= preg_match("/\/|\~|\!|\@|\#|\\$|\%|\^|\&|\*|\(|\)|\（|\）|\+|\{|\}|\:|\<|\>|\?|\[|\]|\,|\.|\/|\'|\`|\-|\=|\\\|\||\s+/",$val)||pk_has_risk($data);
-     if($xss){
-        pk_error(404);
-        exit();
-    }
-    
-}
+    return  !preg_match("/\/|\~|\!|\@|\#|\\$|\%|\^|\&|\*|\(|\)|\（|\）|\+|\{|\}|\:|\<|\>|\?|\[|\]|\,|\.|\/|\'|\`|\-|\=|\\\|\||\s+/",$val);
+   }
   
 function pk_apache(){ 
         $root=pk_env("XSERVER_ROOT");
