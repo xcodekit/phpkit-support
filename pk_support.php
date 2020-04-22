@@ -57,10 +57,8 @@ function pk_detect_uri()
      return str_replace(array('//', '../'), '/', trim($uri, '/'));
  } 
  function pk_env($name){
-      if($name=="XAPP_PROTOCOL"){
-        return XAPP_PROTOCOL; 
-      }else
-        return  getenv($name);
+      
+        return   getenv($name);
  }
  /**
   *  #获取请求URL;
@@ -77,15 +75,7 @@ function pk_detect_uri()
     }  
     return $_SERVER['QUERY_STRING']?$uri."?".$_SERVER['QUERY_STRING']:$uri; 
  }
- /**#异常信息拦截器 */
- function pk_error_render($rCode=false){
-         error_reporting(E_ALL & ~(E_STRICT | E_NOTICE));
-        error_reporting(-1);
-        if ( ! @ini_get('display_errors'))
-        {
-            @ini_set('display_errors', 1);
-        }  
- }
+ 
   /**
   *  #数据请求;
   *  基于CURL实现网络请求访问;
@@ -157,9 +147,8 @@ function pk_each(&$array){
 function pk_cookie($name,$value=false,$arg0=false,$arg1=false,$arg2=false){ 
        if($arg0==false||$arg0<1){
            $arg0=time()+3600*12;
-       }  
-       //pk_env("XSERVER_ROOT")
-       setcookie($name,$value,$arg0,"/",pk_env("XSERVER_ROOT"),defined("PK_DATA_HTTPS")?1:0,1);     
+       }   
+       setcookie($name,$value,$arg0,"/",XSERVER_TMP_DOMAIN,XSERVER_TMP_SCHEME=="https"?1:0,1);     
 }
 /**#mysql函数支持 */
 if(!function_exists('mysql_pconnect')){  
@@ -224,26 +213,26 @@ if(!function_exists('mysql_pconnect')){
    function mysql_close(){     global $mysqli;   return mysqli_close($mysqli);    }  
 }  
 
-function pk_error($code,$msg=""){
+function pk_error($code=1,$msg=""){
+
+     if($code==404){
+        if (session_status()  ==PHP_SESSION_ACTIVE) {
+            session_write_close(); 
+        }   
+        ini_set("session.use_trans_sid", 0);  
+        session_start();   
+        $_SESSION = array();  
+        // if(isset($_COOKIE[session_name()]))
+        // {
+        //   setCookie(session_name(),null,time()-3600,'/');
+        // } 
+        session_destroy();
+    }
     header('HTTP/1.1 404 Not Found'); 
     header("status: 404 Not Found");
     exit(); 
 }
-/***#安全校验 */ 
-function pk_check_cookie($protocol){
-
-    if (session_status()  ==PHP_SESSION_ACTIVE) {
-        session_write_close(); 
-    } 
-    @ini_set("session.use_trans_sid", false); 
-    @ini_set("session.cookie_httponly", true);   
-    if($protocol=="https"){
-        @ini_set("session.cookie_secure", true);  
-        define("PK_DATA_HTTPS","https");
-    }
-    session_start();
-
-}
+ 
 function pk_check_xss($data){
     $val= strtolower(urldecode($data));
     $xss= preg_match("/\/|\~|\!|\@|\#|\\$|\%|\^|\&|\*|\(|\)|\（|\）|\+|\{|\}|\:|\<|\>|\?|\[|\]|\,|\.|\/|\'|\`|\-|\=|\\\|\||\s+/",$val)||pk_has_risk($data);
@@ -253,34 +242,76 @@ function pk_check_xss($data){
     }
     
 }
- 
-function pk_check_sec($protocol="http",$ExcludePaths=array()){
-    define("XAPP_PROTOCOL",$protocol);
-    pk_check_cookie($protocol);
-    include_once 'lib_sec.php'; 
-    $requestRoot=pk_request_uri();
-    /**#不允许使用Get请求发送用户密码 */
-    if(isset($_GET["username"])||isset($_GET["password"])){
-         pk_error(404);
-    }
-     
-    /**#URL地址禁止存在空格 */
-    for($i=0;$i<count($ExcludePaths);$i++){
-         $exclude=$ExcludePaths[$i]; 
-        if(preg_match($exclude,$requestRoot)){
-             return true;
+  
+function pk_apache(){ 
+        $root=pk_env("XSERVER_ROOT");
+        $mode=pk_env("XSERVER_MODE"); 
+        if(isset($root)){
+            $rootInfo= parse_url($root);
+            define("XSERVER_TMP_SCHEME",$rootInfo["scheme"]);
+            define("XSERVER_TMP_DOMAIN",$rootInfo["host"]); 
+            
+        }else{
+            echo "{XSERVER_ROOT}未配置";
+            exit();
+        }
+        if($mode&&$mode=="dev"){
+            /**#开发模式 */
+            error_reporting(E_ALL & ~(E_STRICT | E_NOTICE));
+            error_reporting(-1);
+            if ( ! @ini_get('display_errors'))
+            {
+                @ini_set('display_errors', 1);
+            }  
+        }else{ 
+            /**#生产模式 */
+            error_reporting(E_ALL^E_NOTICE^E_WARNING); 
+            error_reporting(0);
+        } 
+        if (session_status()  ==PHP_SESSION_ACTIVE) {
+            session_write_close(); 
         }  
-    }
- 
-    if (pk_has_space($requestRoot)) {  
-            pk_error(404); 
-    }else{
-       $fullRequest=pk_request_body();  
-       if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){  
-          
+        @ini_set("session.use_trans_sid", 0); 
+        @ini_set("session.cookie_httponly", true);   
+        if(XSERVER_TMP_SCHEME=="https"){
+            @ini_set("session.cookie_secure", true);  
+        } 
+        session_start(); 
+
+}
+function pk_check_sec($excludePaths=array()){
+        $requestRoot=pk_request_uri();   
+        for($i=0;$i<count($excludePaths);$i++){
+            $exclude=$excludePaths[$i]; 
+            if(preg_match($exclude,$requestRoot)){
+                return true;
+            }  
+        }    
+        include_once 'lib_sec.php'; 
+        /**#不允许使用Get请求发送用户密码 */ 
+        if(isset($_GET["username"])||isset($_GET["password"])){ 
             pk_error(404);
-       } 
-    }  
+        } 
+        /**#验证来源 */
+        if(isset($_SERVER['HTTP_REFERER'])){
+            $refer = $_SERVER['HTTP_REFERER'];  
+            if($refer){  
+                $url = parse_url($refer);   
+                if ($url['host'] != XSERVER_TMP_DOMAIN) {  
+                   pk_error(404);
+                }   
+            } 
+        }
+        /**#URL地址禁止存在空格 */
+        if (pk_has_space($requestRoot)) {    
+              pk_error(404); 
+        } 
+        $fullRequest=pk_request_body();  
+        if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){   
+                pk_error(404);
+        } 
+         
+ 
 }
 
  
