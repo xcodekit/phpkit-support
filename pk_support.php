@@ -239,9 +239,11 @@ function pk_check_baseparam($data){
     return  !preg_match("/\/|\~|\!|\@|\#|\\$|\%|\^|\&|\*|\(|\)|\（|\）|\+|\{|\}|\:|\<|\>|\?|\[|\]|\,|\.|\/|\'|\`|\-|\=|\\\|\||\s+/",$val);
    }
   
-function pk_apache(){ 
+function pk_apache($initMode=false){ 
         $root=pk_env("XSERVER_ROOT");
-        $mode=pk_env("XSERVER_MODE"); 
+
+        $mode=$initMode?$initMode:pk_env("XSERVER_MODE"); 
+        
         if(isset($root)){
             $rootInfo= parse_url($root);
             define("XSERVER_TMP_SCHEME",$rootInfo["scheme"]);
@@ -302,12 +304,15 @@ function pk_check_sec($excludePaths=array()){
         if (pk_has_space($requestRoot)) {    
               pk_error(404); 
         } 
-        $fullRequest=pk_request_body();  
+       
+        $fullRequest=pk_request_body(); 
+     
         if(pk_has_risk($fullRequest)|| $fullRequest!=tp_remove_xss($fullRequest)){   
+          
                 pk_error(404);
         } 
          
- 
+     
 }
 
  
