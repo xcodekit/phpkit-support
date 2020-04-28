@@ -157,7 +157,9 @@ if(!function_exists('mysql_pconnect')){
     }
     
     define("MYSQL_NUM","MYSQL_NUM");
-    define("MYSQL_ASSOC","MYSQL_ASSOC");
+    define("MYSQL_ASSOC",MYSQLI_ASSOC);
+    define("MYSQL_BOTH",MYSQLI_BOTH);
+    
     function mysql_num_fields($rs){  
        global $mysqli;  
        return mysqli_num_fields($rs);  
@@ -183,15 +185,27 @@ if(!function_exists('mysql_pconnect')){
        $mysqli = mysqli_connect($dbhost, $dbuser, $dbpass);   
        return $mysqli;  
        }  
+       function mysql_disconnect($instance){   
+                global $mysqli;   
+                mysqli_close($mysqli);
+        }  
+       
    function mysql_get_server_info(){
        return "5.7";
    }
+   
+   function   mysql_db_query ( string $database , string $query ,$con ) {
+            global $mysqli;   
+            mysql_select_db($database);
+            return mysqli_query($mysqli,$query);  
+       }
    function mysql_select_db($dbname){  
        global $mysqli;  
        return mysqli_select_db($mysqli,  str_replace("`","",$dbname));  
        }  
-   function mysql_fetch_array($result){  
-       return mysqli_fetch_array($result);  
+   function mysql_fetch_array($result,$type=false){
+        if(!$type)$type=MYSQL_ASSOC;  
+       return mysqli_fetch_array($result,$type);  
        }  
    function mysql_fetch_assoc($result){  
        if($result)
